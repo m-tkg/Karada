@@ -36,5 +36,23 @@ HealthKit を使うため**実データでの動作確認は実機のみ**。
 ## デバッグ用起動引数(シミュレータ検証)
 
 - `--debug-charts` — チャート描画を単体表示
-- 設定タブ最下部(DEBUG ビルドのみ)からシミュレータの HealthKit に
-  デモデータを投入できる
+
+## Xcode Cloud / TestFlight
+
+`Karada.xcodeproj` は生成物なので、Xcode Cloud では `ci_scripts/ci_post_clone.sh`
+が `xcodegen generate` を実行してからビルドする。
+
+App Store Connect の Xcode Cloud ワークフローは以下で設定する。
+
+- Scheme: `Karada`
+- Archive configuration: `Release`
+- Start Condition: tag push、例: `v*`
+
+リリースタグは次で作成・push する。
+
+```sh
+make release-tag
+```
+
+配布ごとに `project.yml` の `CURRENT_PROJECT_VERSION` を上げる。同じビルド番号は
+App Store Connect に拒否される。

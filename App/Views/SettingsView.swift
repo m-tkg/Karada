@@ -18,9 +18,6 @@ struct SettingsView: View {
                                as? String ?? "-")
             }
 
-            #if DEBUG
-            DebugSeedView()
-            #endif
         }
         .navigationTitle("設定")
     }

@@ -24,6 +24,7 @@ final class HealthKitReader: Sendable {
         (.heartRateRecoveryOneMinute, HKUnit.count().unitDivided(by: .minute()), "count/min"),
         (.oxygenSaturation, .percent(), "%"),
         (.respiratoryRate, HKUnit.count().unitDivided(by: .minute()), "count/min"),
+        (.appleSleepingBreathingDisturbances, .count(), "count"),
         (.vo2Max, HKUnit(from: "ml/kg*min"), "mL/min·kg"),
         (.bodyMass, .gramUnit(with: .kilo), "kg"),
         (.bodyMassIndex, .count(), "count"),
@@ -44,6 +45,7 @@ final class HealthKitReader: Sendable {
 
     static let categoryTypes: [HKCategoryTypeIdentifier] = [
         .sleepAnalysis,
+        .sleepApneaEvent,
         .menstrualFlow,
         .appleStandHour,
         .mindfulSession,

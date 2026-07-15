@@ -22,7 +22,20 @@ struct ChartCard: View {
                 .background(Color(.secondarySystemGroupedBackground),
                             in: RoundedRectangle(cornerRadius: 12))
             } else if failed {
-                EmptyView()
+                VStack(alignment: .leading, spacing: 10) {
+                    Text(LocalAnalytics.chartTitle(name: name))
+                        .font(.subheadline)
+                        .bold()
+                    ContentUnavailableView(
+                        "データがありません",
+                        systemImage: "chart.xyaxis.line",
+                        description: Text("この期間に表示できる記録がありません。")
+                    )
+                    .frame(height: 160)
+                }
+                .padding(12)
+                .background(Color(.secondarySystemGroupedBackground),
+                            in: RoundedRectangle(cornerRadius: 12))
             } else {
                 ProgressView()
                     .frame(maxWidth: .infinity)

@@ -22,7 +22,22 @@ struct DashboardData: Sendable {
         struct Item: Sendable, Identifiable {
             var title: String
             var detail: String
+            var evidence: Evidence? = nil
             var id: String { title }
+        }
+
+        struct Evidence: Sendable {
+            var summary: String
+            var metrics: [Metric] = []
+            var reasons: [String] = []
+            var chartNames: [String] = []
+            var guidance: String? = nil
+
+            struct Metric: Sendable, Identifiable {
+                var label: String
+                var value: String
+                var id: String { label }
+            }
         }
     }
 

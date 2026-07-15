@@ -28,11 +28,13 @@ struct DebugSeedView: View {
             HKQuantityType(.stepCount), HKQuantityType(.restingHeartRate),
             HKQuantityType(.heartRateVariabilitySDNN), HKQuantityType(.bodyMass),
             HKQuantityType(.activeEnergyBurned), HKQuantityType(.appleExerciseTime),
+            HKQuantityType(.distanceWalkingRunning),
             HKCategoryType(.sleepAnalysis), HKObjectType.workoutType(),
         ]
         do {
             try await store.requestAuthorization(toShare: Set(types), read: [])
             var samples: [HKSample] = []
+            var workouts: [(start: Date, end: Date)] = []
             let cal = Calendar.current
             for dayOffset in 1...60 {
                 guard let day = cal.date(byAdding: .day, value: -dayOffset, to: .now)
@@ -78,23 +80,59 @@ struct DebugSeedView: View {
                 if dayOffset % 3 == 0 {
                     let start = cal.date(bySettingHour: 18, minute: 0, second: 0,
                                          of: day)!
-                    // HKWorkout の直接生成 API は非推奨だがシード用途では十分
-                    samples.append(HKWorkout(
-                        activityType: .running, start: start,
-                        end: start.addingTimeInterval(1800),
-                        duration: 1800,
-                        totalEnergyBurned: HKQuantity(unit: .kilocalorie(),
-                                                      doubleValue: 320),
-                        totalDistance: HKQuantity(unit: .meterUnit(with: .kilo),
-                                                  doubleValue: 5.0),
-                        metadata: nil))
+                    workouts.append((start: start, end: start.addingTimeInterval(1800)))
                 }
                 _ = morning
             }
             try await store.save(samples)
-            message = "\(samples.count) 件を投入しました。同期タブから同期してください。"
+            for workout in workouts {
+                try await saveWorkout(store: store, start: workout.start, end: workout.end)
+            }
+            message = "\(samples.count + workouts.count) 件を投入しました。ダッシュボードを更新してください。"
         } catch {
             message = "失敗: \(error.localizedDescription)"
+        }
+    }
+
+    private func saveWorkout(store: HKHealthStore, start: Date, end: Date) async throws {
+        let configuration = HKWorkoutConfiguration()
+        configuration.activityType = .running
+        configuration.locationType = .outdoor
+
+        let builder = HKWorkoutBuilder(healthStore: store, configuration: configuration,
+                                       device: .local())
+        try await builder.beginCollection(at: start)
+        try await builder.addSamples([
+            HKQuantitySample(
+                type: HKQuantityType(.activeEnergyBurned),
+                quantity: HKQuantity(unit: .kilocalorie(), doubleValue: 320),
+                start: start, end: end),
+            HKQuantitySample(
+                type: HKQuantityType(.distanceWalkingRunning),
+                quantity: HKQuantity(unit: .meterUnit(with: .kilo), doubleValue: 5.0),
+                start: start, end: end),
+        ])
+        try await builder.endCollection(at: end)
+        _ = try await finishWorkout(builder)
+    }
+
+    private func finishWorkout(_ builder: HKWorkoutBuilder) async throws -> HKWorkout {
+        try await withCheckedThrowingContinuation { continuation in
+            builder.finishWorkout { workout, error in
+                if let workout {
+                    continuation.resume(returning: workout)
+                } else {
+                    continuation.resume(throwing: error ?? SeedError.workoutUnavailable)
+                }
+            }
+        }
+    }
+
+    private enum SeedError: LocalizedError {
+        case workoutUnavailable
+
+        var errorDescription: String? {
+            "ワークアウトを保存できませんでした。"
         }
     }
 }
