@@ -4,6 +4,8 @@ import SwiftUI
 struct DashboardView: View {
     @AppStorage("dashboardRange") private var range = "1m"
     @AppStorage("lastDashboardSyncAt") private var lastDashboardSyncAt = 0.0
+    @AppStorage("visibleDashboardCategories")
+    private var visibleDashboardCategories = DashboardCategory.defaultStorageValue
     @State private var expandedSectionKeys: Set<String> = [
         "cardio", "activity", "sleep", "body", "walking", "diet", "cycle", "workouts",
     ]
@@ -13,6 +15,10 @@ struct DashboardView: View {
     private let ranges: [(String, String)] = [
         ("1m", "1ヶ月"), ("1y", "1年"), ("3y", "3年"), ("all", "全期間"),
     ]
+
+    private var visibleCategoryKeys: Set<String> {
+        Set(visibleDashboardCategories.split(separator: ",").map(String.init))
+    }
 
     var body: some View {
         ScrollView {
@@ -132,8 +138,17 @@ struct DashboardView: View {
             }
         }
 
-        ForEach(data.sections) { section in
-            chartSection(section)
+        let visibleSections = data.sections.filter { visibleCategoryKeys.contains($0.key) }
+        if visibleSections.isEmpty {
+            ContentUnavailableView(
+                "表示するカテゴリがありません",
+                systemImage: "chart.line.uptrend.xyaxis",
+                description: Text("設定でダッシュボードに表示するカテゴリを選んでください。")
+            )
+        } else {
+            ForEach(visibleSections) { section in
+                chartSection(section)
+            }
         }
     }
 

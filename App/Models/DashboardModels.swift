@@ -1,5 +1,26 @@
 import Foundation
 
+enum DashboardCategory {
+    struct Item: Sendable, Identifiable {
+        var key: String
+        var title: String
+        var id: String { key }
+    }
+
+    static let all: [Item] = [
+        .init(key: "cardio", title: "心肺コンディション"),
+        .init(key: "activity", title: "活動量"),
+        .init(key: "sleep", title: "睡眠"),
+        .init(key: "body", title: "体組成"),
+        .init(key: "walking", title: "歩き方の質"),
+        .init(key: "diet", title: "食事とエネルギー収支"),
+        .init(key: "cycle", title: "月経周期"),
+        .init(key: "workouts", title: "運動記録"),
+    ]
+
+    static let defaultStorageValue = all.map(\.key).joined(separator: ",")
+}
+
 /// ダッシュボードのデータ型。LocalAnalytics が HealthKit から端末上で直接
 /// 組み立てる(サーバー・JSON デコードには依存しない)。
 struct DashboardData: Sendable {
