@@ -15,9 +15,9 @@ iPhone のヘルスケア(HealthKit)データを**端末上で直接分析**す�
 
 ## ビルド / 実機インストール
 
-`.xcodeproj` は [xcodegen](https://github.com/yonaskolb/XcodeGen) の生成物
-(gitignore 対象)。`App/` のファイルを増減したら `xcodegen generate` を
-再実行してからビルドする。
+`.xcodeproj` は [xcodegen](https://github.com/yonaskolb/XcodeGen) で
+`project.yml` から生成して git 管理している。`App/` のファイルを増減したら
+`xcodegen generate` を再実行し、`Karada.xcodeproj` の差分もコミットする。
 
 ```sh
 xcodegen generate
@@ -39,8 +39,9 @@ HealthKit を使うため**実データでの動作確認は実機のみ**。
 
 ## Xcode Cloud / TestFlight
 
-`Karada.xcodeproj` は生成物なので、Xcode Cloud では `ci_scripts/ci_post_clone.sh`
-が `xcodegen generate` を実行してからビルドする。
+Xcode Cloud では git 管理している `Karada.xcodeproj` を使ってビルドする。
+`ci_scripts/ci_post_clone.sh` は `project.yml` との同期確認用に
+`xcodegen generate` を実行する。
 
 App Store Connect の Xcode Cloud ワークフローは以下で設定する。
 

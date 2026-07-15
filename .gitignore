@@ -1,8 +1,9 @@
-Karada.xcodeproj/
 .DS_Store
 build/
 .build/
 DerivedData/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+*.xcodeproj/xcuserdata/
 
 # アイコンは root の *.png 除外から救済
 !App/Assets.xcassets/**/*.png

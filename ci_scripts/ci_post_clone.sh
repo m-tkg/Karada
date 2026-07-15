@@ -1,7 +1,7 @@
 #!/bin/sh
 
-# Xcode Cloud hook: generate Karada.xcodeproj after checkout.
-# The project file is generated from project.yml and is not committed.
+# Xcode Cloud hook: keep Karada.xcodeproj in sync with project.yml.
+# Karada.xcodeproj is committed so Xcode Cloud can discover the project.
 
 set -e
 
