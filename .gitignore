@@ -4,6 +4,7 @@ build/
 DerivedData/
 *.xcodeproj/project.xcworkspace/xcuserdata/
 *.xcodeproj/xcuserdata/
+*.xcodeproj/xcshareddata/xcodecloud/
 
 # アイコンは root の *.png 除外から救済
 !App/Assets.xcassets/**/*.png
