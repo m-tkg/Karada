@@ -36,6 +36,22 @@ enum LocalAnalytics {
                               to: Calendar.current.startOfDay(for: latest))!
     }
 
+    private static func quantityStartDate(
+        identifier: HKQuantityTypeIdentifier, range: String, latest: Date
+    ) async -> Date? {
+        if let cutoff = cutoffDate(range: range, latest: latest) { return cutoff }
+        guard range == "all" else { return nil }
+        return await LocalHealthStore.shared.earliestStartDate(type: HKQuantityType(identifier))
+    }
+
+    private static func categoryStartDate(
+        identifier: HKCategoryTypeIdentifier, range: String, latest: Date
+    ) async -> Date? {
+        if let cutoff = cutoffDate(range: range, latest: latest) { return cutoff }
+        guard range == "all" else { return nil }
+        return await LocalHealthStore.shared.earliestStartDate(type: HKCategoryType(identifier))
+    }
+
     private static func weekBucketKey(_ date: Date) -> String {
         // Python date.weekday()(Monday=0)相当のオフセットで週初(月曜)へ丸める
         let weekday = Calendar.current.component(.weekday, from: date)  // 1=Sun...7=Sat
@@ -85,7 +101,10 @@ enum LocalAnalytics {
     static func dailySeries(identifier: HKQuantityTypeIdentifier, range: String, latest: Date,
                             dedupe: Bool, useSum: Bool) async -> ([String], [Double]) {
         let (unit, _) = quantityUnit(identifier)
-        let start = cutoffDate(range: range, latest: latest) ?? Date(timeIntervalSince1970: 0)
+        guard let start = await quantityStartDate(identifier: identifier, range: range,
+                                                  latest: latest) else {
+            return ([], [])
+        }
         let end = endExclusive(latest)
         let daily: [String: Double]
         if dedupe {
@@ -154,7 +173,10 @@ enum LocalAnalytics {
     }
 
     static func sleepTotalSeries(range: String, latest: Date) async -> ([String], [Double]) {
-        let start = cutoffDate(range: range, latest: latest) ?? Date(timeIntervalSince1970: 0)
+        guard let start = await categoryStartDate(identifier: .sleepAnalysis, range: range,
+                                                  latest: latest) else {
+            return ([], [])
+        }
         let samples = await LocalHealthStore.shared.categorySamples(
             identifier: .sleepAnalysis, start: start, end: endExclusive(latest))
         return bucketize(sleepDailyHours(samples: samples), range: range)
@@ -196,7 +218,10 @@ enum LocalAnalytics {
 
     /// ステージ別時間(時間/日平均)の積み上げ用系列。(サーバー sleep_stage_series と同じ)
     static func sleepStageSeries(range: String, latest: Date) async -> ([String], [String: [Double]]) {
-        let start = cutoffDate(range: range, latest: latest) ?? Date(timeIntervalSince1970: 0)
+        guard let start = await categoryStartDate(identifier: .sleepAnalysis, range: range,
+                                                  latest: latest) else {
+            return ([], [:])
+        }
         let samples = await LocalHealthStore.shared.categorySamples(
             identifier: .sleepAnalysis, start: start, end: endExclusive(latest))
 
@@ -971,7 +996,7 @@ enum LocalAnalytics {
     static func buildChart(name: String, range: String) async throws -> ChartSpec {
         guard let latest = await latestDate() else { throw NoLocalData() }
         let end = endExclusive(latest)
-        let start = cutoffDate(range: range, latest: latest) ?? Date(timeIntervalSince1970: 0)
+        let defaultStart = cutoffDate(range: range, latest: latest) ?? Date(timeIntervalSince1970: 0)
         let bl = bucketLabel(range)
 
         switch name {
@@ -1113,6 +1138,13 @@ enum LocalAnalytics {
                                 "炭水化物": Palette.series[2]],
                         order: ["たんぱく質", "脂質", "炭水化物"])
         case "workouts":
+            let start: Date
+            if let cutoff = cutoffDate(range: range, latest: latest) {
+                start = cutoff
+            } else {
+                start = await LocalHealthStore.shared.earliestStartDate(
+                    type: HKObjectType.workoutType()) ?? defaultStart
+            }
             let workouts = await LocalHealthStore.shared.workouts(start: start, end: end)
             let (lab, order, series) = workoutsBucketed(workouts: workouts, range: range)
             guard !lab.isEmpty else { throw NoLocalData() }
@@ -1130,8 +1162,15 @@ enum LocalAnalytics {
                         title: "ワークアウト回数(\(workoutBucketLabel(range)))", ylabel: "回",
                         colors: colors, order: namedOrder)
         case "cycle_len":
+            let start: Date
+            if let cutoff = cutoffDate(range: range, latest: latest) {
+                start = cutoff
+            } else {
+                start = await LocalHealthStore.shared.earliestStartDate(
+                    type: HKCategoryType(.menstrualFlow)) ?? defaultStart
+            }
             let samples = await LocalHealthStore.shared.categorySamples(
-                identifier: .menstrualFlow, start: Date(timeIntervalSince1970: 0), end: end)
+                identifier: .menstrualFlow, start: start, end: end)
             let cycles = menstrualCycles(samples: samples).filter { $0.cycleLen != nil }
             guard !cycles.isEmpty else { throw NoLocalData() }
             return try single(name: name, kind: .bar, labels: cycles.map(\.start),

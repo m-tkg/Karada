@@ -46,6 +46,13 @@ final class LocalHealthStore: @unchecked Sendable {
         !(await querySamples(type: type, predicate: nil, limit: 1, sort: [])).isEmpty
     }
 
+    /// 指定型の最古サンプル開始日。全期間チャートで無駄に 1970 年から走査しないために使う。
+    func earliestStartDate(type: HKSampleType) async -> Date? {
+        let sort = [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
+        let samples = await querySamples(type: type, predicate: nil, limit: 1, sort: sort)
+        return samples.first?.startDate
+    }
+
     /// 累積型(歩数等)の日次合計。ソースが複数あれば「日ごとに合計最大の
     /// 単一ソース」だけを採用し二重計上を避ける(サーバー v_daily_dominant と同じ)。
     func dominantDailySum(identifier: HKQuantityTypeIdentifier, unit: HKUnit,

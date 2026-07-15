@@ -42,7 +42,7 @@ struct ChartCard: View {
                     .frame(height: 190)
             }
         }
-        .task(id: range) {
+        .task(id: "\(name)-\(range)") {
             spec = nil
             failed = false
             do {
