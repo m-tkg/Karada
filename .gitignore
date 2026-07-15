@@ -1,0 +1,7 @@
+Karada.xcodeproj/
+.DS_Store
+build/
+DerivedData/
+
+# アイコンは root の *.png 除外から救済
+!App/Assets.xcassets/**/*.png
