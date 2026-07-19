@@ -27,8 +27,26 @@ xcodebuild -project Karada.xcodeproj -scheme Karada \
   -destination 'generic/platform=iOS' -allowProvisioningUpdates build
 ```
 
-署名は Team `G72M73C546` / Automatic(project.yml に定義済み)。
+署名は Automatic。Team ID と Bundle ID は `Config/Signing.xcconfig` に定義。
 HealthKit を使うため**実データでの動作確認は実機のみ**。
+
+### 自分のアカウントでビルドする
+
+`Config/Signing.xcconfig` は編集せず、`Config/Local.xcconfig` を作って上書きする。
+
+```sh
+cp Config/Local.xcconfig.sample Config/Local.xcconfig
+# DEVELOPMENT_TEAM と PRODUCT_BUNDLE_IDENTIFIER を自分の値に書き換える
+xcodegen generate
+```
+
+`Config/Local.xcconfig` は `.gitignore` 済みで、`xcodegen generate` の出力にも
+影響しない。そのため**追跡ファイルの差分は一切出ない**(誤コミットの心配が無い)。
+
+Bundle ID は必ず変更すること。`com.mtkg.karada` は元の開発者のチームに
+登録済みで、他のアカウントでは Automatic signing に失敗する。
+HealthKit の entitlement を使うため、無料の Personal Team では
+プロビジョニングできない場合がある。
 
 初回起動 → ダッシュボードタブを開くとヘルスケアの認可シートが出るので
 「すべてオンにする」→ 許可。

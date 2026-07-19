@@ -35,6 +35,7 @@
 		354368D01C408CF402F3D514 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		66F9201F5C8457742488E5DA /* ChartCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartCard.swift; sourceTree = "<group>"; };
 		6A45E074431850CB92170826 /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
+		6BC2C10A31C2CFB22D726B26 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 		8699CDF927EC9F0E7AEA6BA0 /* LocalHealthStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalHealthStore.swift; sourceTree = "<group>"; };
 		9100EE8B46A916B9B694D851 /* DashboardModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardModels.swift; sourceTree = "<group>"; };
 		9B0C322C1C26111E699A8AC9 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
@@ -70,10 +71,19 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		99CD526D8FF8655D74A9530B /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				6BC2C10A31C2CFB22D726B26 /* Signing.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
 		9DF2E304EF61BEDD400F9DA6 = {
 			isa = PBXGroup;
 			children = (
 				BA7DEB37E70BC28C42EAB818 /* App */,
+				99CD526D8FF8655D74A9530B /* Config */,
 				F4B029282F04A2A5597A7902 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -207,6 +217,7 @@
 /* Begin XCBuildConfiguration section */
 		11AEA45BF3C220EB65FE7224 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6BC2C10A31C2CFB22D726B26 /* Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -242,7 +253,6 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 14;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DEVELOPMENT_TEAM = G72M73C546;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -274,6 +284,7 @@
 		};
 		741E94B422DEBC2028A08751 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 6BC2C10A31C2CFB22D726B26 /* Signing.xcconfig */;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				CLANG_ANALYZER_NONNULL = YES;
@@ -309,7 +320,6 @@
 				COPY_PHASE_STRIP = NO;
 				CURRENT_PROJECT_VERSION = 14;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DEVELOPMENT_TEAM = G72M73C546;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu11;
@@ -345,7 +355,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.mtkg.karada;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 			};
@@ -364,7 +373,6 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.mtkg.karada;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = 1;
 			};

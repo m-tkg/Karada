@@ -1,4 +1,7 @@
 .DS_Store
+
+# 各自の署名設定(Team ID / Bundle ID)の上書き。Signing.xcconfig から任意読み込み
+Config/Local.xcconfig
 build/
 .build/
 DerivedData/

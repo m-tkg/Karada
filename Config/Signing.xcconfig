@@ -1,0 +1,13 @@
+// 署名まわりの既定値。
+//
+// このファイルはリポジトリの所有者(および Xcode Cloud)向けの値。
+// 自分のアカウントでビルドしたい場合は、このファイルを編集せず
+// Config/Local.xcconfig を作って上書きする(Local.xcconfig は git 管理外)。
+// 手順は Config/Local.xcconfig.sample と README を参照。
+
+DEVELOPMENT_TEAM = G72M73C546
+PRODUCT_BUNDLE_IDENTIFIER = com.mtkg.karada
+
+// 末尾の "?" は「ファイルが無ければ無視する」の意味。
+// これにより Local.xcconfig が無い環境(CI 等)でもそのままビルドできる。
+#include? "Local.xcconfig"

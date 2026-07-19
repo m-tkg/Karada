@@ -1,0 +1,18 @@
+// 自分のアカウントで Karada をビルドするための上書き設定のひな形。
+//
+// 使い方:
+//   cp Config/Local.xcconfig.sample Config/Local.xcconfig
+//   # 下の2行を自分の値に書き換える
+//   xcodegen generate
+//
+// Config/Local.xcconfig は .gitignore 済みなので、追跡ファイルを一切変更せずに
+// 自分用のビルドができる(git status が汚れない)。
+
+// Apple Developer の Team ID。
+// Xcode > Settings > Accounts、または https://developer.apple.com/account の
+// Membership details に表示される10文字の英数字。
+DEVELOPMENT_TEAM = XXXXXXXXXX
+
+// Bundle ID は世界で一意なので、必ず自分のものに変更する。
+// com.mtkg.karada は元の開発者のチームに登録済みで、他のアカウントでは使えない。
+PRODUCT_BUNDLE_IDENTIFIER = com.example.karada
