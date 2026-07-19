@@ -914,7 +914,7 @@ enum LocalAnalytics {
             .init(key: "sleep", title: "睡眠",
                   charts: ["sleep_total", "sleep_stages", "breathing_disturbances"]),
             .init(key: "body", title: "体組成",
-                  charts: ["body_mass", "body_fat"]),
+                  charts: ["body_mass", "bmi", "body_fat"]),
             .init(key: "walking", title: "歩き方の質",
                   charts: ["walking_speed", "walking_steplen", "walking_balance"]),
             .init(key: "diet", title: "食事とエネルギー収支",
@@ -958,6 +958,7 @@ enum LocalAnalytics {
         case "sleep_stages": return "睡眠ステージ内訳"
         case "breathing_disturbances": return "睡眠中の呼吸の乱れ"
         case "body_mass": return "体重"
+        case "bmi": return "BMI"
         case "body_fat": return "体脂肪率"
         case "walking_speed": return "歩行速度"
         case "walking_steplen": return "歩幅"
@@ -1067,6 +1068,19 @@ enum LocalAnalytics {
                                              latest: latest, dedupe: false, useSum: false)
             return try single(name: name, kind: .line, labels: lab, values: v,
                               title: "体重(\(bl))", ylabel: "kg")
+        case "bmi":
+            // 記録済みの BMI より体重の方が高頻度に残るため、体重と身長から算出する。
+            // 身長が未登録なら BMI は出せない。
+            let (lab, weights) = await dailySeries(identifier: .bodyMass, range: range,
+                                                   latest: latest, dedupe: false, useSum: false)
+            guard let cm = await LocalHealthStore.shared.latestQuantity(
+                identifier: .height, unit: .meterUnit(with: .centi)), cm > 0 else {
+                throw NoLocalData()
+            }
+            let meters = cm / 100
+            let v = weights.map { $0 / (meters * meters) }
+            return try single(name: name, kind: .line, labels: lab, values: v,
+                              title: "BMI(\(bl))", ylabel: "BMI")
         case "body_fat":
             let (lab, raw) = await dailySeries(identifier: .bodyFatPercentage, range: range,
                                                latest: latest, dedupe: false, useSum: false)

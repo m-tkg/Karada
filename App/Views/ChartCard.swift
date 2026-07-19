@@ -265,22 +265,13 @@ struct SpecChart: View {
         let isBar = spec.kind == .bar || spec.kind == .stackedBar
         let dMin = isBar ? Swift.min(0, rawMin) : rawMin  // 棒グラフの基線は 0
 
-        var spread = dMax - dMin
-        if spread <= 0 { spread = Swift.max(abs(dMax) * 0.2, 1) }  // 値が一定の場合
-        // 取り込む範囲は値の大きさの15%を下限にする。VO2 max や体重のように
-        // 変動幅が狭い指標だと、データ幅だけを基準にするとしきい値が常に範囲外になり、
-        // グラフ全体が一様な色になって境界が見えなくなるため。
-        let reach = Swift.max(spread, abs(dMax) * 0.15)
-        let reachLo = dMin - reach
-        let reachHi = dMax + reach
-
-        // データの手が届く範囲にあるしきい値を、近い順に軸へ取り込む。
-        // ただし取り込みでデータが縦幅の25%未満に潰れる場合は諦める
-        // (しきい値を見せるより、データの変化が読めることを優先する)。
-        let dataSpan = dMax - dMin
+        // しきい値を近い順に Y 軸へ取り込む。判断基準は「データが縦幅の25%以上を
+        // 保てるか」だけにする。距離で足切りすると、体脂肪率のように変動が小さい指標で
+        // 目安の境界が永久に画面外となり、全体が一様な色になってしまうため。
+        // 値が一定・1点だけだとデータ幅が 0 になり歯止めが効かないので下限を置く
+        let dataSpan = Swift.max(dMax - dMin, abs(dMax) * 0.05)
         let candidates = zones.flatMap { [$0.lower, $0.upper] }
             .compactMap { $0 }
-            .filter { $0 >= reachLo && $0 <= reachHi }
             .sorted { distance(of: $0, from: dMin, to: dMax) < distance(of: $1, from: dMin, to: dMax) }
 
         var lo = dMin
@@ -290,7 +281,11 @@ struct SpecChart: View {
             let nextLo = Swift.min(lo, bound)
             let nextHi = Swift.max(hi, bound)
             let nextSpan = nextHi - nextLo
-            if dataSpan > 0, nextSpan > 0, dataSpan / nextSpan < 0.25 { continue }
+            guard nextSpan > 0 else { continue }
+            // 最も近い1本は多少潰れても見せる(境界がどこかは必ず伝えたい)。
+            // 2本目以降は、データの変化が読める場合だけ取り込む。
+            let minRatio = extended ? 0.35 : 0.10
+            if dataSpan / nextSpan < minRatio { continue }
             lo = nextLo
             hi = nextHi
             extended = true
@@ -363,6 +358,14 @@ struct SpecChart: View {
             return bodyFatZones(profile: profile)
         case "body_mass":
             return bodyMassZones(profile: profile)
+        case "bmi":
+            // 日本肥満学会: 18.5未満 低体重 / 18.5〜25 普通体重 / 25以上 肥満
+            // (1度25〜30、2度以上30〜)。性別・年齢に依存しない。
+            return [Zone(lower: 18.5, upper: 25, kind: .safe),
+                    Zone(lower: 25, upper: 30, kind: .caution),
+                    Zone(lower: 17, upper: 18.5, kind: .caution),
+                    Zone(lower: 30, upper: nil, kind: .danger),
+                    Zone(lower: nil, upper: 17, kind: .danger)]
         case "walking_speed":
             // 歩行速度(m/s → km/h)。1.2 m/s(4.32 km/h)が健常成人の目安、
             // EWGSOP2 は 0.8 m/s(2.88 km/h)以下を低身体機能(サルコペニア)とする。
