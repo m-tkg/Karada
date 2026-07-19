@@ -17,9 +17,7 @@ struct ChartCard: View {
                     Text(spec.title).font(.subheadline).bold()
                     SpecChart(spec: spec)
                         .frame(height: 190)
-                    if !SpecChart.zones(forChart: name).isEmpty {
-                        zoneLegend
-                    }
+                    zoneLegend(for: SpecChart.zoneLayout(for: spec).bands)
                 }
                 .padding(12)
                 .background(Color(.secondarySystemGroupedBackground),
@@ -56,12 +54,14 @@ struct ChartCard: View {
         }
     }
 
-    /// 背景の色分けの意味を示すコンパクトな凡例。そのグラフに存在する色だけ出す。
-    private var zoneLegend: some View {
-        let kinds = SpecChart.zones(forChart: name).map(\.kind)
-        var items: [(String, Color)] = []
-        if kinds.contains(.safe) { items.append(("目安の範囲", .green)) }
-        if kinds.contains(.danger) { items.append(("注意", .red)) }
+    /// 背景の色分けの凡例。実際に描画された帯だけを載せる
+    /// (説明があるのに帯が無い、という食い違いを防ぐ)。
+    private func zoneLegend(for bands: [SpecChart.Band]) -> some View {
+        let kinds = bands.map(\.kind)
+        let items: [(String, Color)] = [
+            kinds.contains(.safe) ? ("目安の範囲", Color.green) : nil,
+            kinds.contains(.danger) ? ("注意", Color.red) : nil,
+        ].compactMap { $0 }
         return HStack(spacing: 14) {
             ForEach(items, id: \.0) { text, color in
                 HStack(spacing: 4) {
@@ -77,6 +77,20 @@ struct ChartCard: View {
     }
 }
 
+/// ドメイン指定がある時だけ Y 軸の範囲を固定する。
+private struct OptionalYScale: ViewModifier {
+    let domain: ClosedRange<Double>?
+
+    @ViewBuilder
+    func body(content: Content) -> some View {
+        if let domain {
+            content.chartYScale(domain: domain)
+        } else {
+            content
+        }
+    }
+}
+
 /// spec の kind に応じて LineMark / BarMark を組み立てる。
 struct SpecChart: View {
     let spec: ChartSpec
@@ -88,7 +102,9 @@ struct SpecChart: View {
         let series: String
     }
 
-    private var points: [Point] {
+    private var points: [Point] { Self.makePoints(spec) }
+
+    private static func makePoints(_ spec: ChartSpec) -> [Point] {
         let dates = spec.labels.map { DayFormat.date($0) }
         var out: [Point] = []
         for s in spec.series {
@@ -113,11 +129,11 @@ struct SpecChart: View {
 
     var body: some View {
         let pts = points
-        let bands = zoneBands(for: pts)
+        let layout = SpecChart.zoneLayout(for: spec)
         Group {
             if isLine {
                 Chart {
-                    zoneMarks(bands)
+                    zoneMarks(layout)
                     ForEach(pts) { p in
                         LineMark(x: .value("日付", p.date), y: .value(spec.ylabel, p.value))
                             .foregroundStyle(by: .value("系列", p.series))
@@ -126,7 +142,7 @@ struct SpecChart: View {
                 }
             } else {
                 Chart {
-                    zoneMarks(bands)
+                    zoneMarks(layout)
                     ForEach(pts) { p in
                         BarMark(x: .value("日付", p.date), y: .value(spec.ylabel, p.value))
                             .foregroundStyle(by: .value("系列", p.series))
@@ -137,12 +153,13 @@ struct SpecChart: View {
         .chartForegroundStyleScale(domain: seriesNames, range: seriesColors)
         .chartLegend(spec.series.count > 1 ? .visible : .hidden)
         .chartYAxisLabel(spec.ylabel)
+        .modifier(OptionalYScale(domain: layout.domain))
     }
 
     /// 安全(薄緑)・危険(薄赤)エリアをデータの背後に敷くマーク。
     @ChartContentBuilder
-    private func zoneMarks(_ bands: [Band]) -> some ChartContent {
-        ForEach(bands) { band in
+    private func zoneMarks(_ layout: ZoneLayout) -> some ChartContent {
+        ForEach(layout.bands) { band in
             RectangleMark(
                 xStart: .value("期間開始", band.xLo),
                 xEnd: .value("期間終了", band.xHi),
@@ -155,34 +172,74 @@ struct SpecChart: View {
 
     // ------------------------------------------------------------ 安全/危険エリア
 
-    /// 描画用に、しきい値をデータの表示範囲へクランプしたバンド。
-    /// 範囲外に伸ばすと Y 軸の縮尺が歪むため、データの min/max 内に収める。
-    private struct Band: Identifiable {
+    /// 実際に描画する帯。Y 軸ドメインへクランプ済み。
+    struct Band: Identifiable {
         let id = UUID()
         let xLo: Date
         let xHi: Date
         let lo: Double
         let hi: Double
-        let color: Color
+        let kind: Zone.Kind
+        var color: Color { kind == .safe ? .green : .red }
     }
 
-    private func zoneBands(for pts: [Point]) -> [Band] {
-        let zones = SpecChart.zones(forChart: spec.name)
-        guard !zones.isEmpty, !pts.isEmpty else { return [] }
-        let dates = pts.map(\.date)
-        guard let xLo = dates.min(), let xHi = dates.max() else { return [] }
+    /// 帯と、それを見せるための Y 軸ドメイン。
+    struct ZoneLayout {
+        var domain: ClosedRange<Double>?
+        var bands: [Band] = []
+    }
+
+    /// しきい値がデータの外にあると帯が一切描かれないため、データの近くにある
+    /// しきい値は Y 軸ドメインに含めて必ず見えるようにする。逆に遠すぎるしきい値
+    /// (例: 安静時心拍 60bpm 台の人にとっての 100bpm)は含めない。含めるとデータが
+    /// 潰れて読めなくなるうえ、その範囲は現状問題が無いことを意味するため。
+    static func zoneLayout(for spec: ChartSpec) -> ZoneLayout {
+        let zones = zones(forChart: spec.name)
+        guard !zones.isEmpty else { return ZoneLayout(domain: nil) }
+        let pts = makePoints(spec)
         let values = pts.map(\.value)
+        guard let rawMin = values.min(), let dMax = values.max(),
+              let xLo = pts.map(\.date).min(), let xHi = pts.map(\.date).max()
+        else { return ZoneLayout(domain: nil) }
+
         let isBar = spec.kind == .bar || spec.kind == .stackedBar
-        // 棒グラフは基線が 0 のため下端を 0 まで含める
-        let vMin = isBar ? Swift.min(0, values.min() ?? 0) : (values.min() ?? 0)
-        let vMax = values.max() ?? 0
-        guard vMax > vMin else { return [] }
-        return zones.compactMap { z in
-            let lo = Swift.max(z.lower ?? vMin, vMin)
-            let hi = Swift.min(z.upper ?? vMax, vMax)
-            guard hi > lo else { return nil }  // データと重ならない帯は描かない
-            return Band(xLo: xLo, xHi: xHi, lo: lo, hi: hi, color: z.color)
+        let dMin = isBar ? Swift.min(0, rawMin) : rawMin  // 棒グラフの基線は 0
+
+        var spread = dMax - dMin
+        if spread <= 0 { spread = Swift.max(abs(dMax) * 0.2, 1) }  // 値が一定の場合
+        let reachLo = dMin - spread
+        let reachHi = dMax + spread
+
+        // データの手が届く範囲にあるしきい値だけ軸に取り込む
+        var lo = dMin
+        var hi = dMax
+        var extended = false
+        for bound in zones.flatMap({ [$0.lower, $0.upper] }).compactMap({ $0 }) {
+            guard bound >= reachLo, bound <= reachHi else { continue }
+            lo = Swift.min(lo, bound)
+            hi = Swift.max(hi, bound)
+            extended = true
         }
+
+        var domain: ClosedRange<Double>?
+        if extended {
+            // 端に来たしきい値でも帯に厚みが出るよう余白を足す
+            var span = hi - lo
+            if span <= 0 { span = Swift.max(abs(hi) * 0.2, 1) }
+            let pad = span * 0.12
+            lo = isBar ? Swift.min(lo, 0) : lo - pad
+            hi += pad
+            domain = lo...hi
+        }
+
+        let bands: [Band] = zones.compactMap { z in
+            let bLo = Swift.max(z.lower ?? lo, lo)
+            let bHi = Swift.min(z.upper ?? hi, hi)
+            guard bHi > bLo else { return nil }  // 表示範囲と重ならない帯は描かない
+            return Band(xLo: xLo, xHi: xHi, lo: bLo, hi: bHi, kind: z.kind)
+        }
+        guard !bands.isEmpty else { return ZoneLayout(domain: domain) }
+        return ZoneLayout(domain: domain, bands: bands)
     }
 
     struct Zone {
