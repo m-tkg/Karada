@@ -25,6 +25,10 @@ struct SettingsView: View {
                 }
             }
 
+            Section("解説") {
+                NavigationLink("指標の説明") { GlossaryView() }
+            }
+
             Section("情報") {
                 LabeledContent("バージョン",
                                value: Bundle.main.infoDictionary?["CFBundleShortVersionString"]

@@ -15,12 +15,14 @@
 		2CEDBED33924DC27C3249ACE /* LocalAnalytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EBC77F15F777FE522CF91B3 /* LocalAnalytics.swift */; };
 		5BDAC255B6A745B2635361B1 /* DashboardModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9100EE8B46A916B9B694D851 /* DashboardModels.swift */; };
 		9A9C8A3FD18D5B5897D8F259 /* WorkoutLabels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0362860C41923B1C8DA52A95 /* WorkoutLabels.swift */; };
+		A84B95133DBEFF7F3E5A10D6 /* GlossaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 319759A19AB5E0071F1B6B13 /* GlossaryView.swift */; };
 		B10F8F878A47B1A3812DAEA0 /* LocalHealthStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8699CDF927EC9F0E7AEA6BA0 /* LocalHealthStore.swift */; };
 		B6360C1CA01BD196305726C0 /* ChartCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F9201F5C8457742488E5DA /* ChartCard.swift */; };
 		C2D75C9A4C7CE122485F2AB0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 351148CF9D9FFF29CDFA626C /* ContentView.swift */; };
 		C9BFC3039C59502BA488A219 /* KaradaApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9BB53E602CE2BEA98E265AE2 /* KaradaApp.swift */; };
 		CAB76A1E9972CC5C146B861B /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 354368D01C408CF402F3D514 /* Assets.xcassets */; };
 		F0D17AA954D408E37536EF2D /* Palette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A45E074431850CB92170826 /* Palette.swift */; };
+		F6A42451B315200F36465F21 /* Glossary.swift in Sources */ = {isa = PBXBuildFile; fileRef = F9FE3254C19576F2DCBD190E /* Glossary.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -28,6 +30,7 @@
 		09C0AAF0D923C55C79158383 /* HealthKitReader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthKitReader.swift; sourceTree = "<group>"; };
 		0F18A07A8809FB19F910C341 /* DebugSeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugSeedView.swift; sourceTree = "<group>"; };
 		2EBC77F15F777FE522CF91B3 /* LocalAnalytics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalAnalytics.swift; sourceTree = "<group>"; };
+		319759A19AB5E0071F1B6B13 /* GlossaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlossaryView.swift; sourceTree = "<group>"; };
 		351148CF9D9FFF29CDFA626C /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		354368D01C408CF402F3D514 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		66F9201F5C8457742488E5DA /* ChartCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChartCard.swift; sourceTree = "<group>"; };
@@ -40,6 +43,7 @@
 		D615ADAE51444ADC601506CB /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		D912893F082AD48191B319FE /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
 		EF090123A072B5A6E44F6C5F /* Karada.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = Karada.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F9FE3254C19576F2DCBD190E /* Glossary.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Glossary.swift; sourceTree = "<group>"; };
 		FB862E67E9CCFD9B3445BF49 /* Karada.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = Karada.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -48,6 +52,7 @@
 			isa = PBXGroup;
 			children = (
 				9100EE8B46A916B9B694D851 /* DashboardModels.swift */,
+				F9FE3254C19576F2DCBD190E /* Glossary.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -59,6 +64,7 @@
 				351148CF9D9FFF29CDFA626C /* ContentView.swift */,
 				D615ADAE51444ADC601506CB /* DashboardView.swift */,
 				0F18A07A8809FB19F910C341 /* DebugSeedView.swift */,
+				319759A19AB5E0071F1B6B13 /* GlossaryView.swift */,
 				9B0C322C1C26111E699A8AC9 /* SettingsView.swift */,
 			);
 			path = Views;
@@ -184,6 +190,8 @@
 				1AE54E1DC2F5A0011B33BFDB /* DashboardView.swift in Sources */,
 				14C08A4ECBF5CBF0B06FE814 /* DayFormat.swift in Sources */,
 				20DC10AC6353EFC88CC65BDB /* DebugSeedView.swift in Sources */,
+				F6A42451B315200F36465F21 /* Glossary.swift in Sources */,
+				A84B95133DBEFF7F3E5A10D6 /* GlossaryView.swift in Sources */,
 				03C770A0460BDEF29B94BE50 /* HealthKitReader.swift in Sources */,
 				C9BFC3039C59502BA488A219 /* KaradaApp.swift in Sources */,
 				2CEDBED33924DC27C3249ACE /* LocalAnalytics.swift in Sources */,
@@ -232,7 +240,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = G72M73C546;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -252,7 +260,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0.3;
+				MARKETING_VERSION = 1.0.4;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -299,7 +307,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = G72M73C546;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -313,7 +321,7 @@
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
-				MARKETING_VERSION = 1.0.3;
+				MARKETING_VERSION = 1.0.4;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PRODUCT_NAME = "$(TARGET_NAME)";
