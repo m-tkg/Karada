@@ -172,4 +172,15 @@ enum WorkoutTypeNames {
 struct HealthProfile: Sendable, Equatable {
     var age: Int?
     var isFemale: Bool?
+    var heightMeters: Double?
+
+    /// 身長を読み込んだプロフィールを返す(身長はサンプル型なので非同期取得)。
+    func withHeight() async -> HealthProfile {
+        var copy = self
+        if let cm = await LocalHealthStore.shared.latestQuantity(
+            identifier: .height, unit: .meterUnit(with: .centi)), cm > 0 {
+            copy.heightMeters = cm / 100
+        }
+        return copy
+    }
 }

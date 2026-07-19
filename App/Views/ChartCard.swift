@@ -47,7 +47,7 @@ struct ChartCard: View {
         .task(id: "\(name)-\(range)") {
             spec = nil
             failed = false
-            profile = HealthKitReader().profile()
+            profile = await HealthKitReader().profile().withHeight()
             do {
                 spec = try await LocalAnalytics.buildChart(name: name, range: range)
             } catch {
@@ -299,10 +299,14 @@ struct SpecChart: View {
                     Zone(lower: 85, upper: 100, kind: .caution),
                     Zone(lower: nil, upper: 40, kind: .danger),
                     Zone(lower: 100, upper: nil, kind: .danger)]
+        case "hrv":
+            return hrvZones(profile: profile)
         case "vo2":
             return vo2Zones(profile: profile)
         case "body_fat":
             return bodyFatZones(profile: profile)
+        case "body_mass":
+            return bodyMassZones(profile: profile)
         case "walking_speed":
             // 歩行速度(m/s → km/h)。1.2 m/s(4.32 km/h)が健常成人の目安、
             // EWGSOP2 は 0.8 m/s(2.88 km/h)以下を低身体機能(サルコペニア)とする。
@@ -339,6 +343,41 @@ struct SpecChart: View {
         return [Zone(lower: target, upper: nil, kind: .safe),
                 Zone(lower: low, upper: target, kind: .caution),
                 Zone(lower: nil, upper: low, kind: .danger)]
+    }
+
+    /// HRV(SDNN)の年代別の目安。Apple Watch は約60秒の記録から算出するため、
+    /// 24時間ホルター(健常成人 141±39ms)や5分記録(50〜100ms)の基準は使えない。
+    /// ウェアラブル実測の分布(20〜30代で50〜70ms、50代で30〜55ms、全体平均約36ms)に合わせる。
+    /// 個人差が非常に大きい指標なので、範囲外でも直ちに異常とは限らない。
+    private static func hrvZones(profile: HealthProfile) -> [Zone] {
+        guard let age = profile.age else { return [] }
+        // 各年代の典型範囲の下限。平均的な値が緑に入るようにする
+        // (「良好」水準を境にすると平均的な人まで境界域になってしまう)。
+        let typical: Double
+        switch age {
+        case ..<30: typical = 50
+        case 30..<40: typical = 45
+        case 40..<50: typical = 38
+        case 50..<60: typical = 32
+        case 60..<70: typical = 27
+        default: typical = 23
+        }
+        return [Zone(lower: typical, upper: nil, kind: .safe),
+                Zone(lower: typical * 0.5, upper: typical, kind: .caution),
+                Zone(lower: nil, upper: typical * 0.5, kind: .danger)]
+    }
+
+    /// 身長から求める体重の目安(日本肥満学会の BMI 判定基準)。
+    /// BMI 18.5未満: 低体重 / 18.5〜25: 普通体重 / 25以上: 肥満(1度25〜30、2度以上30〜)。
+    /// 標準体重(BMI22)= 身長(m)^2 × 22。
+    private static func bodyMassZones(profile: HealthProfile) -> [Zone] {
+        guard let h = profile.heightMeters, h > 0.5 else { return [] }
+        func weight(bmi: Double) -> Double { bmi * h * h }
+        return [Zone(lower: weight(bmi: 18.5), upper: weight(bmi: 25), kind: .safe),
+                Zone(lower: weight(bmi: 25), upper: weight(bmi: 30), kind: .caution),
+                Zone(lower: weight(bmi: 17), upper: weight(bmi: 18.5), kind: .caution),
+                Zone(lower: weight(bmi: 30), upper: nil, kind: .danger),
+                Zone(lower: nil, upper: weight(bmi: 17), kind: .danger)]
     }
 
     /// 体脂肪率の基準(American Council on Exercise)。

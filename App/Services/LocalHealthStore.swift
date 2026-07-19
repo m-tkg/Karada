@@ -46,6 +46,14 @@ final class LocalHealthStore: @unchecked Sendable {
         !(await querySamples(type: type, predicate: nil, limit: 1, sort: [])).isEmpty
     }
 
+    /// 指定型の最新サンプルの値。身長のように「最後に記録された1件」を使う型向け。
+    func latestQuantity(identifier: HKQuantityTypeIdentifier, unit: HKUnit) async -> Double? {
+        let sort = [NSSortDescriptor(key: HKSampleSortIdentifierEndDate, ascending: false)]
+        let samples = await querySamples(type: HKQuantityType(identifier), predicate: nil,
+                                         limit: 1, sort: sort)
+        return (samples.first as? HKQuantitySample)?.quantity.doubleValue(for: unit)
+    }
+
     /// 指定型の最古サンプル開始日。全期間チャートで無駄に 1970 年から走査しないために使う。
     func earliestStartDate(type: HKSampleType) async -> Date? {
         let sort = [NSSortDescriptor(key: HKSampleSortIdentifierStartDate, ascending: true)]
