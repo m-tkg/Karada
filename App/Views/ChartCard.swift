@@ -342,17 +342,16 @@ struct SpecChart: View {
     }
 
     /// 体脂肪率の基準(American Council on Exercise)。
-    /// 男性: 必須2〜5%、標準18〜24%、25%以上で肥満。
-    /// 女性: 必須10〜13%、標準25〜31%、32%以上で肥満。低すぎ(男6%・女14%未満)も注意。
+    /// 男性: 必須2〜5%、アスリート6〜13%、フィットネス14〜17%、標準18〜24%、25%以上で肥満。
+    /// 女性: 必須10〜13%、アスリート14〜20%、フィットネス21〜24%、標準25〜31%、32%以上で肥満。
+    ///
+    /// アスリート域も健康な範囲なので緑に含める(ここを境界域にすると緑が不当に狭くなる)。
+    /// 男性6%・女性14%を下回るのは危険な低さとされるため赤。
     private static func bodyFatZones(profile: HealthProfile) -> [Zone] {
         guard let isFemale = profile.isFemale else { return [] }
-        let tooLow = isFemale ? 14.0 : 6.0
-        let healthyLo = isFemale ? 21.0 : 14.0   // フィットネス域の下限
-        let healthyHi = isFemale ? 31.0 : 24.0   // 標準域の上限
-        let obese = isFemale ? 32.0 : 25.0
-        return [Zone(lower: healthyLo, upper: healthyHi, kind: .safe),
-                Zone(lower: tooLow, upper: healthyLo, kind: .caution),
-                Zone(lower: healthyHi, upper: obese, kind: .caution),
+        let tooLow = isFemale ? 14.0 : 6.0   // これ未満は危険な低体脂肪
+        let obese = isFemale ? 32.0 : 25.0   // これ以上で肥満
+        return [Zone(lower: tooLow, upper: obese, kind: .safe),
                 Zone(lower: obese, upper: nil, kind: .danger),
                 Zone(lower: nil, upper: tooLow, kind: .danger)]
     }
