@@ -159,12 +159,16 @@ struct SpecChart: View {
     }
 
     /// 安全(薄緑)・危険(薄赤)エリアをデータの背後に敷くマーク。
+    ///
+    /// x を指定せずプロット領域の全幅に敷く。データ点の最初〜最後を矩形にすると、
+    /// VO2 max のように記録が疎な指標では帯が細くなり、1点しか無いと幅ゼロで
+    /// 消えてしまうため(凡例だけ出て帯が見えない状態になる)。
     @ChartContentBuilder
     private func zoneMarks(_ layout: ZoneLayout) -> some ChartContent {
         ForEach(layout.bands) { band in
             RectangleMark(
-                xStart: .value("期間開始", band.xLo),
-                xEnd: .value("期間終了", band.xHi),
+                xStart: nil as CGFloat?,
+                xEnd: nil as CGFloat?,
                 yStart: .value(spec.ylabel, band.lo),
                 yEnd: .value(spec.ylabel, band.hi)
             )
@@ -174,11 +178,16 @@ struct SpecChart: View {
 
     // ------------------------------------------------------------ 安全/危険エリア
 
+    /// しきい値がデータ範囲からどれだけ離れているか(範囲内なら 0)。
+    private static func distance(of value: Double, from lo: Double, to hi: Double) -> Double {
+        if value < lo { return lo - value }
+        if value > hi { return value - hi }
+        return 0
+    }
+
     /// 実際に描画する帯。Y 軸ドメインへクランプ済み。
     struct Band: Identifiable {
         let id = UUID()
-        let xLo: Date
-        let xHi: Date
         let lo: Double
         let hi: Double
         let kind: Zone.Kind
@@ -217,8 +226,7 @@ struct SpecChart: View {
         guard !zones.isEmpty else { return ZoneLayout(domain: nil) }
         let pts = makePoints(spec)
         let values = pts.map(\.value)
-        guard let rawMin = values.min(), let dMax = values.max(),
-              let xLo = pts.map(\.date).min(), let xHi = pts.map(\.date).max()
+        guard let rawMin = values.min(), let dMax = values.max()
         else { return ZoneLayout(domain: nil) }
 
         let isBar = spec.kind == .bar || spec.kind == .stackedBar
@@ -226,17 +234,32 @@ struct SpecChart: View {
 
         var spread = dMax - dMin
         if spread <= 0 { spread = Swift.max(abs(dMax) * 0.2, 1) }  // 値が一定の場合
-        let reachLo = dMin - spread
-        let reachHi = dMax + spread
+        // 取り込む範囲は値の大きさの15%を下限にする。VO2 max や体重のように
+        // 変動幅が狭い指標だと、データ幅だけを基準にするとしきい値が常に範囲外になり、
+        // グラフ全体が一様な色になって境界が見えなくなるため。
+        let reach = Swift.max(spread, abs(dMax) * 0.15)
+        let reachLo = dMin - reach
+        let reachHi = dMax + reach
 
-        // データの手が届く範囲にあるしきい値だけ軸に取り込む
+        // データの手が届く範囲にあるしきい値を、近い順に軸へ取り込む。
+        // ただし取り込みでデータが縦幅の25%未満に潰れる場合は諦める
+        // (しきい値を見せるより、データの変化が読めることを優先する)。
+        let dataSpan = dMax - dMin
+        let candidates = zones.flatMap { [$0.lower, $0.upper] }
+            .compactMap { $0 }
+            .filter { $0 >= reachLo && $0 <= reachHi }
+            .sorted { distance(of: $0, from: dMin, to: dMax) < distance(of: $1, from: dMin, to: dMax) }
+
         var lo = dMin
         var hi = dMax
         var extended = false
-        for bound in zones.flatMap({ [$0.lower, $0.upper] }).compactMap({ $0 }) {
-            guard bound >= reachLo, bound <= reachHi else { continue }
-            lo = Swift.min(lo, bound)
-            hi = Swift.max(hi, bound)
+        for bound in candidates {
+            let nextLo = Swift.min(lo, bound)
+            let nextHi = Swift.max(hi, bound)
+            let nextSpan = nextHi - nextLo
+            if dataSpan > 0, nextSpan > 0, dataSpan / nextSpan < 0.25 { continue }
+            lo = nextLo
+            hi = nextHi
             extended = true
         }
 
@@ -255,7 +278,7 @@ struct SpecChart: View {
             let bLo = Swift.max(z.lower ?? lo, lo)
             let bHi = Swift.min(z.upper ?? hi, hi)
             guard bHi > bLo else { return nil }  // 表示範囲と重ならない帯は描かない
-            return Band(xLo: xLo, xHi: xHi, lo: bLo, hi: bHi, kind: z.kind)
+            return Band(lo: bLo, hi: bHi, kind: z.kind)
         }
         guard !bands.isEmpty else { return ZoneLayout(domain: domain) }
         return ZoneLayout(domain: domain, bands: bands)
