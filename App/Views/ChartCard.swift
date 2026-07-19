@@ -66,7 +66,7 @@ struct ChartCard: View {
             ForEach(items, id: \.0) { text, color in
                 HStack(spacing: 4) {
                     RoundedRectangle(cornerRadius: 2)
-                        .fill(color.opacity(0.3))
+                        .fill(color.opacity(0.18))
                         .frame(width: 12, height: 12)
                     Text(text)
                 }
@@ -149,7 +149,7 @@ struct SpecChart: View {
                 yStart: .value(spec.ylabel, band.lo),
                 yEnd: .value(spec.ylabel, band.hi)
             )
-            .foregroundStyle(band.color.opacity(0.15))
+            .foregroundStyle(band.color.opacity(0.08))
         }
     }
 
@@ -214,6 +214,12 @@ struct SpecChart: View {
         case "body_fat":  // 一般成人の健康域の目安(性差大)。32% 以上は高め
             return [Zone(lower: 10, upper: 25, kind: .safe),
                     Zone(lower: 32, upper: nil, kind: .danger)]
+        case "walking_speed":  // 歩行速度 ≒ 1.2 m/s(4.3 km/h)以上で良好、0.8 m/s(2.9 km/h)未満は要注意
+            return [Zone(lower: 4.3, upper: nil, kind: .safe),
+                    Zone(lower: nil, upper: 2.9, kind: .danger)]
+        case "cycle_len":  // 正常な月経周期はおおむね 21〜35 日、45 日以上は長め
+            return [Zone(lower: 21, upper: 35, kind: .safe),
+                    Zone(lower: 45, upper: nil, kind: .danger)]
         default:
             return []
         }
