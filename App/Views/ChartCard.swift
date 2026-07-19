@@ -18,6 +18,7 @@ struct ChartCard: View {
                     Text(spec.title).font(.subheadline).bold()
                     SpecChart(spec: spec, profile: profile)
                         .frame(height: 190)
+                    sparseNote(for: spec)
                     zoneLegend(for: SpecChart.zoneLayout(for: spec, profile: profile).bands)
                 }
                 .padding(12)
@@ -31,7 +32,8 @@ struct ChartCard: View {
                     ContentUnavailableView(
                         "データがありません",
                         systemImage: "chart.xyaxis.line",
-                        description: Text("この期間に表示できる記録がありません。")
+                        description: Text("この期間にヘルスケアの記録がありません。"
+                                          + "期間を広げるか、記録が保存されているか確認してください。")
                     )
                     .frame(height: 160)
                 }
@@ -53,6 +55,18 @@ struct ChartCard: View {
             } catch {
                 failed = true  // データ無しなどは静かに非表示
             }
+        }
+    }
+
+    /// 記録が少ないときに件数を明示する。点が数個しか無いグラフは一見して
+    /// 「データが無い」のか「記録が少ないだけ」なのか区別が付かないため。
+    @ViewBuilder
+    private func sparseNote(for spec: ChartSpec) -> some View {
+        let count = SpecChart.pointCount(of: spec)
+        if count <= 5 {
+            Text("この期間の記録は \(count) 件です。期間を広げると推移を確認できます。")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
         }
     }
 
@@ -129,6 +143,23 @@ struct SpecChart: View {
 
     private var isLine: Bool { spec.kind == .line || spec.kind == .multiLine }
 
+    /// 記録が疎なほどシンボルを大きくする。
+    /// 折れ線は点が1つだと線分を描けず、シンボルが無いと何も表示されないため
+    /// (体重や VO2 max のように毎日記録されない指標で「データがあるのに空」に見える)。
+    private var symbolSize: CGFloat {
+        switch SpecChart.pointCount(of: spec) {
+        case ..<3: return 80
+        case 3..<15: return 50
+        case 15..<60: return 20
+        default: return 0  // 密すぎる折れ線は点を打つと潰れるので線だけ
+        }
+    }
+
+    /// 系列あたりの実データ点数(最大)。
+    static func pointCount(of spec: ChartSpec) -> Int {
+        spec.series.map { $0.values.compactMap { $0 }.count }.max() ?? 0
+    }
+
     var body: some View {
         let pts = points
         let layout = SpecChart.zoneLayout(for: spec, profile: profile)
@@ -140,6 +171,8 @@ struct SpecChart: View {
                         LineMark(x: .value("日付", p.date), y: .value(spec.ylabel, p.value))
                             .foregroundStyle(by: .value("系列", p.series))
                             .interpolationMethod(.monotone)
+                            .symbol(by: .value("系列", p.series))
+                            .symbolSize(symbolSize)
                     }
                 }
             } else {
