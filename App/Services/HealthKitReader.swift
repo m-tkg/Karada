@@ -61,11 +61,33 @@ final class HealthKitReader: Sendable {
             if let t = HKObjectType.categoryType(forIdentifier: id) { types.insert(t) }
         }
         types.insert(HKObjectType.workoutType())
+        // 年齢・性別で基準が変わる指標(体脂肪率・VO2 max)の判定に使う
+        if let t = HKObjectType.characteristicType(forIdentifier: .dateOfBirth) { types.insert(t) }
+        if let t = HKObjectType.characteristicType(forIdentifier: .biologicalSex) { types.insert(t) }
         return types
     }
 
     func requestAuthorization() async throws {
         try await store.requestAuthorization(toShare: [], read: Self.readTypes())
+    }
+
+    /// 年齢・性別で基準が変わる指標の判定に使うプロフィール。
+    /// 未設定・未認可なら nil のままにして、呼び出し側で判定を諦める。
+    func profile() -> HealthProfile {
+        var age: Int?
+        if let components = try? store.dateOfBirthComponents(),
+           let birth = Calendar.current.date(from: components) {
+            age = Calendar.current.dateComponents([.year], from: birth, to: Date()).year
+        }
+        var isFemale: Bool?
+        if let sex = try? store.biologicalSex().biologicalSex {
+            switch sex {
+            case .female: isFemale = true
+            case .male: isFemale = false
+            default: isFemale = nil  // other / notSet は判定しない
+            }
+        }
+        return HealthProfile(age: age, isFemale: isFemale)
     }
 
     // MARK: - カテゴリ値の短縮名
@@ -144,4 +166,10 @@ enum WorkoutTypeNames {
     static func name(for type: HKWorkoutActivityType) -> String {
         "HKWorkoutActivityType" + (names[type] ?? "Other")
     }
+}
+
+/// 基準値の切り替えに使う利用者属性。ヘルスケアに未登録なら nil。
+struct HealthProfile: Sendable, Equatable {
+    var age: Int?
+    var isFemale: Bool?
 }

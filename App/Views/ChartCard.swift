@@ -9,15 +9,16 @@ struct ChartCard: View {
 
     @State private var spec: ChartSpec?
     @State private var failed = false
+    @State private var profile = HealthProfile()
 
     var body: some View {
         Group {
             if let spec {
                 VStack(alignment: .leading, spacing: 6) {
                     Text(spec.title).font(.subheadline).bold()
-                    SpecChart(spec: spec)
+                    SpecChart(spec: spec, profile: profile)
                         .frame(height: 190)
-                    zoneLegend(for: SpecChart.zoneLayout(for: spec).bands)
+                    zoneLegend(for: SpecChart.zoneLayout(for: spec, profile: profile).bands)
                 }
                 .padding(12)
                 .background(Color(.secondarySystemGroupedBackground),
@@ -46,6 +47,7 @@ struct ChartCard: View {
         .task(id: "\(name)-\(range)") {
             spec = nil
             failed = false
+            profile = HealthKitReader().profile()
             do {
                 spec = try await LocalAnalytics.buildChart(name: name, range: range)
             } catch {
@@ -58,10 +60,9 @@ struct ChartCard: View {
     /// (説明があるのに帯が無い、という食い違いを防ぐ)。
     private func zoneLegend(for bands: [SpecChart.Band]) -> some View {
         let kinds = bands.map(\.kind)
-        let items: [(String, Color)] = [
-            kinds.contains(.safe) ? ("目安の範囲", Color.green) : nil,
-            kinds.contains(.danger) ? ("注意", Color.red) : nil,
-        ].compactMap { $0 }
+        let items: [(String, Color)] = [SpecChart.Zone.Kind.safe, .caution, .danger]
+            .filter { kinds.contains($0) }
+            .map { (SpecChart.label(for: $0), SpecChart.color(for: $0)) }
         return HStack(spacing: 14) {
             ForEach(items, id: \.0) { text, color in
                 HStack(spacing: 4) {
@@ -94,6 +95,7 @@ private struct OptionalYScale: ViewModifier {
 /// spec の kind に応じて LineMark / BarMark を組み立てる。
 struct SpecChart: View {
     let spec: ChartSpec
+    var profile: HealthProfile = .init()
 
     private struct Point: Identifiable {
         let id = UUID()
@@ -129,7 +131,7 @@ struct SpecChart: View {
 
     var body: some View {
         let pts = points
-        let layout = SpecChart.zoneLayout(for: spec)
+        let layout = SpecChart.zoneLayout(for: spec, profile: profile)
         Group {
             if isLine {
                 Chart {
@@ -180,7 +182,24 @@ struct SpecChart: View {
         let lo: Double
         let hi: Double
         let kind: Zone.Kind
-        var color: Color { kind == .safe ? .green : .red }
+        var color: Color { SpecChart.color(for: kind) }
+    }
+
+    static func color(for kind: Zone.Kind) -> Color {
+        switch kind {
+        case .safe: return .green
+        case .caution: return .orange
+        case .danger: return .red
+        }
+    }
+
+    /// 凡例に出す段階の名前。緑→橙→赤の順で重くなる。
+    static func label(for kind: Zone.Kind) -> String {
+        switch kind {
+        case .safe: return "目安の範囲"
+        case .caution: return "境界域"
+        case .danger: return "注意"
+        }
     }
 
     /// 帯と、それを見せるための Y 軸ドメイン。
@@ -193,8 +212,8 @@ struct SpecChart: View {
     /// しきい値は Y 軸ドメインに含めて必ず見えるようにする。逆に遠すぎるしきい値
     /// (例: 安静時心拍 60bpm 台の人にとっての 100bpm)は含めない。含めるとデータが
     /// 潰れて読めなくなるうえ、その範囲は現状問題が無いことを意味するため。
-    static func zoneLayout(for spec: ChartSpec) -> ZoneLayout {
-        let zones = zones(forChart: spec.name)
+    static func zoneLayout(for spec: ChartSpec, profile: HealthProfile) -> ZoneLayout {
+        let zones = zones(forChart: spec.name, profile: profile)
         guard !zones.isEmpty else { return ZoneLayout(domain: nil) }
         let pts = makePoints(spec)
         let values = pts.map(\.value)
@@ -243,43 +262,99 @@ struct SpecChart: View {
     }
 
     struct Zone {
-        enum Kind { case safe, danger }
+        enum Kind { case safe, caution, danger }
         var lower: Double?  // nil = 下端(データ最小)まで
         var upper: Double?  // nil = 上端(データ最大)まで
         var kind: Kind
-        var color: Color { kind == .safe ? .green : .red }
     }
 
-    /// グラフごとの安全(緑)・危険(赤)エリア。公的な一般目安に基づく概算で、
-    /// 年齢・性別・個人差により最適値は異なる。アプリの「今月の評価」の判定基準に揃える。
-    static func zones(forChart name: String) -> [Zone] {
+    /// グラフごとの安全(緑)・境界(橙)・注意(赤)エリア。出典は各 case のコメント参照。
+    /// 体脂肪率・VO2 max は年齢/性別で基準が変わるため、プロフィールが無ければ帯を出さない。
+    static func zones(forChart name: String, profile: HealthProfile = .init()) -> [Zone] {
         switch name {
-        case "steps":  // 1日 8,000 歩以上が目安、6,000 歩未満は少なめ
+        case "steps":
+            // Lancet Public Health 2022(15コホートのメタ解析)。8,000〜10,000歩で
+            // 死亡リスク低下が頭打ち。最低四分位(中央値約3,500歩)がリスク最大。
             return [Zone(lower: 8000, upper: nil, kind: .safe),
-                    Zone(lower: nil, upper: 6000, kind: .danger)]
-        case "sleep_total":  // 成人の推奨 7〜9 時間、6 時間未満は不足
+                    Zone(lower: 4000, upper: 8000, kind: .caution),
+                    Zone(lower: nil, upper: 4000, kind: .danger)]
+        case "sleep_total":
+            // 睡眠時間と総死亡のメタ解析(U字型、7時間が最小)。長時間側のリスクが
+            // 大きく(9時間 RR1.21、10時間 RR1.37)、短時間側は6時間で RR1.01。
             return [Zone(lower: 7, upper: 9, kind: .safe),
-                    Zone(lower: nil, upper: 6, kind: .danger)]
-        case "exercise":  // WHO 推奨 週 150 分 ≒ 1日 21 分以上
-            return [Zone(lower: 21, upper: nil, kind: .safe)]
-        case "rhr":  // 安静時 60 bpm 以下は良好、100 bpm 以上は高め(頻脈域)
-            return [Zone(lower: nil, upper: 60, kind: .safe),
+                    Zone(lower: 6, upper: 7, kind: .caution),
+                    Zone(lower: 9, upper: 10, kind: .caution),
+                    Zone(lower: nil, upper: 6, kind: .danger),
+                    Zone(lower: 10, upper: nil, kind: .danger)]
+        case "exercise":
+            // WHO 身体活動ガイドライン 2020: 中強度 週150〜300分(≒1日21.4分)。
+            // 週75分(≒1日10.7分)未満は推奨の半分に満たない。
+            return [Zone(lower: 150.0 / 7, upper: nil, kind: .safe),
+                    Zone(lower: nil, upper: 75.0 / 7, kind: .caution)]
+        case "rhr":
+            // 日本人間ドック・予防医療学会の安静時心拍数の目安
+            // 45〜85: 異常なし / 40〜44・86〜99: 要再検査 / 〜39・100〜: 要精密検査
+            return [Zone(lower: 45, upper: 85, kind: .safe),
+                    Zone(lower: 40, upper: 45, kind: .caution),
+                    Zone(lower: 85, upper: 100, kind: .caution),
+                    Zone(lower: nil, upper: 40, kind: .danger),
                     Zone(lower: 100, upper: nil, kind: .danger)]
-        case "vo2":  // 一般成人でおおむね 40 以上が良好、25 未満は低め
-            return [Zone(lower: 40, upper: nil, kind: .safe),
-                    Zone(lower: nil, upper: 25, kind: .danger)]
-        case "body_fat":  // 一般成人の健康域の目安(性差大)。32% 以上は高め
-            return [Zone(lower: 10, upper: 25, kind: .safe),
-                    Zone(lower: 32, upper: nil, kind: .danger)]
-        case "walking_speed":  // 歩行速度 ≒ 1.2 m/s(4.3 km/h)以上で良好、0.8 m/s(2.9 km/h)未満は要注意
-            return [Zone(lower: 4.3, upper: nil, kind: .safe),
-                    Zone(lower: nil, upper: 2.9, kind: .danger)]
-        case "cycle_len":  // 正常な月経周期はおおむね 21〜35 日、45 日以上は長め
+        case "vo2":
+            return vo2Zones(profile: profile)
+        case "body_fat":
+            return bodyFatZones(profile: profile)
+        case "walking_speed":
+            // 歩行速度(m/s → km/h)。1.2 m/s(4.32 km/h)が健常成人の目安、
+            // EWGSOP2 は 0.8 m/s(2.88 km/h)以下を低身体機能(サルコペニア)とする。
+            return [Zone(lower: 4.32, upper: nil, kind: .safe),
+                    Zone(lower: 2.88, upper: 4.32, kind: .caution),
+                    Zone(lower: nil, upper: 2.88, kind: .danger)]
+        case "cycle_len":
+            // ACOG / NICHD: 正常な月経周期は 21〜35 日。範囲外は月経不整。
             return [Zone(lower: 21, upper: 35, kind: .safe),
-                    Zone(lower: 45, upper: nil, kind: .danger)]
+                    Zone(lower: 35, upper: 45, kind: .caution),
+                    Zone(lower: 18, upper: 21, kind: .caution),
+                    Zone(lower: 45, upper: nil, kind: .danger),
+                    Zone(lower: nil, upper: 18, kind: .danger)]
         default:
             return []
         }
+    }
+
+    /// VO2 max の年代別「良好」水準(mL/kg/min)。女性は男性比おおむね 10〜15% 低い。
+    /// 出典: 一般成人の年代別 VO2 max 標準値(Cooper Institute 系の基準表)。
+    private static func vo2Zones(profile: HealthProfile) -> [Zone] {
+        guard let age = profile.age, let isFemale = profile.isFemale else { return [] }
+        let good: Double  // これ以上で「良好」
+        switch age {
+        case ..<30: good = 39
+        case 30..<40: good = 37
+        case 40..<50: good = 35
+        case 50..<60: good = 32
+        case 60..<70: good = 28
+        default: good = 25
+        }
+        let target = isFemale ? good * 0.87 : good  // 女性は約13%低い
+        let low = target * 0.72                     // 最低五分位相当(死亡リスクが顕著に上昇)
+        return [Zone(lower: target, upper: nil, kind: .safe),
+                Zone(lower: low, upper: target, kind: .caution),
+                Zone(lower: nil, upper: low, kind: .danger)]
+    }
+
+    /// 体脂肪率の基準(American Council on Exercise)。
+    /// 男性: 必須2〜5%、標準18〜24%、25%以上で肥満。
+    /// 女性: 必須10〜13%、標準25〜31%、32%以上で肥満。低すぎ(男6%・女14%未満)も注意。
+    private static func bodyFatZones(profile: HealthProfile) -> [Zone] {
+        guard let isFemale = profile.isFemale else { return [] }
+        let tooLow = isFemale ? 14.0 : 6.0
+        let healthyLo = isFemale ? 21.0 : 14.0   // フィットネス域の下限
+        let healthyHi = isFemale ? 31.0 : 24.0   // 標準域の上限
+        let obese = isFemale ? 32.0 : 25.0
+        return [Zone(lower: healthyLo, upper: healthyHi, kind: .safe),
+                Zone(lower: tooLow, upper: healthyLo, kind: .caution),
+                Zone(lower: healthyHi, upper: obese, kind: .caution),
+                Zone(lower: obese, upper: nil, kind: .danger),
+                Zone(lower: nil, upper: tooLow, kind: .danger)]
     }
 }
 
