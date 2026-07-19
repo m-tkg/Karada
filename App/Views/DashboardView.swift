@@ -13,7 +13,7 @@ struct DashboardView: View {
     @State private var errorText: String?
 
     private let ranges: [(String, String)] = [
-        ("1m", "1ヶ月"), ("1y", "1年"), ("3y", "3年"), ("all", "全期間"),
+        ("1w", "1週間"), ("1m", "1ヶ月"), ("1y", "1年"), ("3y", "3年"), ("all", "全期間"),
     ]
 
     private var visibleCategoryKeys: Set<String> {

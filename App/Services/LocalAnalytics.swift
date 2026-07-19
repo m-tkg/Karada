@@ -7,21 +7,25 @@ import HealthKit
 /// ダッシュボード・チャートを構築する(アプリ単体動作の要)。サーバー同期は
 /// あくまで web 版へのバックアップ用オプションで、ここには関与しない。
 enum LocalAnalytics {
-    static let rangeDaysMap: [String: Int?] = ["1m": 31, "1y": 366, "3y": 366 * 3, "all": nil]
+    static let rangeDaysMap: [String: Int?] = ["1w": 7, "1m": 31, "1y": 366, "3y": 366 * 3, "all": nil]
     static let rangeLabels: [String: String] = [
-        "1m": "直近1ヶ月", "1y": "直近1年", "3y": "直近3年", "all": "全期間",
+        "1w": "直近1週間", "1m": "直近1ヶ月", "1y": "直近1年", "3y": "直近3年", "all": "全期間",
     ]
 
     static func bucketLabel(_ range: String) -> String {
         switch range {
-        case "1m": return "日"
+        case "1w", "1m": return "日"
         case "1y": return "週平均"
         default: return "月平均"
         }
     }
 
     static func workoutBucketLabel(_ range: String) -> String {
-        range == "1m" ? "週次" : "月次"
+        switch range {
+        case "1w": return "日次"
+        case "1m": return "週次"
+        default: return "月次"
+        }
     }
 
     // ------------------------------------------------------------ 日付ユーティリティ
@@ -66,7 +70,7 @@ enum LocalAnalytics {
 
     /// {date: value} を期間バケット(1m=日/1y=週/3y・all=月)の平均に畳む。
     static func bucketize(_ daily: [String: Double], range: String) -> ([String], [Double]) {
-        if range == "1m" {
+        if range == "1m" || range == "1w" {
             let items = daily.sorted { $0.key < $1.key }
             return (items.map(\.key), items.map(\.value))
         }
@@ -344,11 +348,15 @@ enum LocalAnalytics {
     static func workoutsBucketed(workouts: [HKWorkout], range: String,
                                  ) -> (labels: [String], order: [String], series: [String: [Double]]) {
         guard !workouts.isEmpty else { return ([], [], [:]) }
-        let useWeekBucket = (range == "1m")
+        let bucketKey: (Date) -> String
+        switch range {
+        case "1w": bucketKey = { DayFormat.string($0) }
+        case "1m": bucketKey = weekBucketKey
+        default:   bucketKey = { monthBucketKey(DayFormat.string($0)) }
+        }
         struct Row { let bucket: String; let activity: String }
         let rows: [Row] = workouts.map { w in
-            let bucket = useWeekBucket ? weekBucketKey(w.startDate)
-                                       : monthBucketKey(DayFormat.string(w.startDate))
+            let bucket = bucketKey(w.startDate)
             let full = WorkoutTypeNames.name(for: w.workoutActivityType)
             return Row(bucket: bucket, activity: String(full.dropFirst("HKWorkoutActivityType".count)))
         }
