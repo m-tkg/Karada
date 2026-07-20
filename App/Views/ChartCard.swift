@@ -7,23 +7,25 @@ struct ChartCard: View {
     let name: String
     let range: String
 
+    @Environment(AppNavigation.self) private var nav: AppNavigation?
+
     @State private var spec: ChartSpec?
     @State private var failed = false
     @State private var profile = HealthProfile()
 
+    /// 解説へ飛べるグラフかどうか(将来チャートが増えても壊れないようにガードする)。
+    private var hasGlossary: Bool { Glossary.location(forChart: name) != nil }
+
     var body: some View {
         Group {
             if let spec {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text(spec.title).font(.subheadline).bold()
-                    SpecChart(spec: spec, profile: profile)
-                        .frame(height: 190)
-                    sparseNote(for: spec)
-                    zoneLegend(for: SpecChart.zoneLayout(for: spec, profile: profile).bands)
+                if hasGlossary, let nav {
+                    Button { nav.showGlossary(forChart: name) } label: { card(spec) }
+                        .buttonStyle(.plain)
+                        .accessibilityHint("この指標の説明を開きます")
+                } else {
+                    card(spec)
                 }
-                .padding(12)
-                .background(Color(.secondarySystemGroupedBackground),
-                            in: RoundedRectangle(cornerRadius: 12))
             } else if failed {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(LocalAnalytics.chartTitle(name: name))
@@ -56,6 +58,28 @@ struct ChartCard: View {
                 failed = true  // データ無しなどは静かに非表示
             }
         }
+    }
+
+    /// グラフ本体のカード。タップで解説へ飛べるときはタイトル横に ⓘ を出す。
+    private func card(_ spec: ChartSpec) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                Text(spec.title).font(.subheadline).bold()
+                Spacer(minLength: 4)
+                if hasGlossary {
+                    Image(systemName: "info.circle")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+            SpecChart(spec: spec, profile: profile)
+                .frame(height: 190)
+            sparseNote(for: spec)
+            zoneLegend(for: SpecChart.zoneLayout(for: spec, profile: profile).bands)
+        }
+        .padding(12)
+        .background(Color(.secondarySystemGroupedBackground),
+                    in: RoundedRectangle(cornerRadius: 12))
     }
 
     /// 記録が少ないときに件数を明示する。点が数個しか無いグラフは一見して

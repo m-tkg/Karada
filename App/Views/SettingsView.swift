@@ -26,7 +26,7 @@ struct SettingsView: View {
             }
 
             Section("解説") {
-                NavigationLink("指標の説明") { GlossaryView() }
+                NavigationLink("指標の説明", value: AppNavigation.SettingsRoute.glossary)
             }
 
             Section("情報") {

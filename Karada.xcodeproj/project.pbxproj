@@ -15,6 +15,7 @@
 		2CEDBED33924DC27C3249ACE /* LocalAnalytics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2EBC77F15F777FE522CF91B3 /* LocalAnalytics.swift */; };
 		5BDAC255B6A745B2635361B1 /* DashboardModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9100EE8B46A916B9B694D851 /* DashboardModels.swift */; };
 		9A9C8A3FD18D5B5897D8F259 /* WorkoutLabels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0362860C41923B1C8DA52A95 /* WorkoutLabels.swift */; };
+		9DAA39410BE91672FF2254BB /* AppNavigation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8BF7353DE452F0CD3EB25769 /* AppNavigation.swift */; };
 		A84B95133DBEFF7F3E5A10D6 /* GlossaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 319759A19AB5E0071F1B6B13 /* GlossaryView.swift */; };
 		B10F8F878A47B1A3812DAEA0 /* LocalHealthStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8699CDF927EC9F0E7AEA6BA0 /* LocalHealthStore.swift */; };
 		B6360C1CA01BD196305726C0 /* ChartCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 66F9201F5C8457742488E5DA /* ChartCard.swift */; };
@@ -37,6 +38,7 @@
 		6A45E074431850CB92170826 /* Palette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Palette.swift; sourceTree = "<group>"; };
 		6BC2C10A31C2CFB22D726B26 /* Signing.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Signing.xcconfig; sourceTree = "<group>"; };
 		8699CDF927EC9F0E7AEA6BA0 /* LocalHealthStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalHealthStore.swift; sourceTree = "<group>"; };
+		8BF7353DE452F0CD3EB25769 /* AppNavigation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppNavigation.swift; sourceTree = "<group>"; };
 		9100EE8B46A916B9B694D851 /* DashboardModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardModels.swift; sourceTree = "<group>"; };
 		9B0C322C1C26111E699A8AC9 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		9BB53E602CE2BEA98E265AE2 /* KaradaApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KaradaApp.swift; sourceTree = "<group>"; };
@@ -52,6 +54,7 @@
 		01146D10E9B6C09995417C10 /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				8BF7353DE452F0CD3EB25769 /* AppNavigation.swift */,
 				9100EE8B46A916B9B694D851 /* DashboardModels.swift */,
 				F9FE3254C19576F2DCBD190E /* Glossary.swift */,
 			);
@@ -194,6 +197,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				9DAA39410BE91672FF2254BB /* AppNavigation.swift in Sources */,
 				B6360C1CA01BD196305726C0 /* ChartCard.swift in Sources */,
 				C2D75C9A4C7CE122485F2AB0 /* ContentView.swift in Sources */,
 				5BDAC255B6A745B2635361B1 /* DashboardModels.swift in Sources */,
