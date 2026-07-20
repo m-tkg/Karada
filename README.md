@@ -13,6 +13,10 @@ iPhone のヘルスケア(HealthKit)データを**端末上で直接分析**す�
 ソース選択など、集計ロジックはすべて `App/Services/LocalAnalytics.swift` に
 まとまっている。
 
+> **自分のアカウントでビルドする場合**は、先に `Config/Local.xcconfig` を作って
+> Team ID と Bundle ID を自分の値に差し替える必要がある。
+> 手順は[こちら](#自分のアカウントでビルドする)。
+
 ## ビルド / 実機インストール
 
 `.xcodeproj` は [xcodegen](https://github.com/yonaskolb/XcodeGen) で
