@@ -48,6 +48,9 @@ Bundle ID は必ず変更すること。`com.mtkg.karada` は元の開発者の�
 HealthKit の entitlement を使うため、無料の Personal Team では
 プロビジョニングできない場合がある。
 
+この構成を他プロジェクトへ適用する手順は
+[docs/xcode-signing-xcconfig.md](docs/xcode-signing-xcconfig.md) にまとめてある。
+
 初回起動 → ダッシュボードタブを開くとヘルスケアの認可シートが出るので
 「すべてオンにする」→ 許可。
 
