@@ -141,7 +141,7 @@ struct SpecChart: View {
     let spec: ChartSpec
     var profile: HealthProfile = .init()
 
-    /// タップ(またはドラッグ)で選んだ日付。その日の各系列の値を吹き出しで示す。
+    /// タップで選んだ日付。その日の各系列の値を吹き出しで示す。
     @State private var selectedDate: Date?
 
     private struct Point: Identifiable {
@@ -229,19 +229,10 @@ struct SpecChart: View {
                 Rectangle()
                     .fill(.clear)
                     .contentShape(Rectangle())
+                    // ドラッグは付けない(ScrollView の縦スクロールと競合するため)。
                     .onTapGesture { location in
-                        select(at: location, proxy: proxy, geo: geo, pts: pts, toggle: true)
+                        select(at: location, proxy: proxy, geo: geo, pts: pts)
                     }
-                    // ScrollView の縦スクロールを奪わないよう simultaneous にし、
-                    // 横方向が優位なドラッグだけ選択を追従させる。
-                    .simultaneousGesture(
-                        DragGesture(minimumDistance: 12)
-                            .onChanged { value in
-                                let t = value.translation
-                                guard abs(t.width) > abs(t.height) else { return }
-                                select(at: value.location, proxy: proxy, geo: geo, pts: pts, toggle: false)
-                            }
-                    )
             }
         }
     }
@@ -249,9 +240,9 @@ struct SpecChart: View {
     // ------------------------------------------------------------ タップで値を表示
 
     /// タップ位置に最も近いデータ点の日付を選択する。
-    /// 同じ日付をもう一度タップしたら選択解除(toggle)。
+    /// 同じ日付をもう一度タップしたら選択解除。
     private func select(at location: CGPoint, proxy: ChartProxy, geo: GeometryProxy,
-                        pts: [Point], toggle: Bool) {
+                        pts: [Point]) {
         guard let plotAnchor = proxy.plotFrame else { return }
         let plot = geo[plotAnchor]
         let x = location.x - plot.origin.x
@@ -260,7 +251,7 @@ struct SpecChart: View {
         guard let nearest = dates.min(by: {
             abs($0.timeIntervalSince(tapped)) < abs($1.timeIntervalSince(tapped))
         }) else { return }
-        if toggle, selectedDate == nearest {
+        if selectedDate == nearest {
             selectedDate = nil
         } else {
             selectedDate = nearest
