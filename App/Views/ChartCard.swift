@@ -19,13 +19,7 @@ struct ChartCard: View {
     var body: some View {
         Group {
             if let spec {
-                if hasGlossary, let nav {
-                    Button { nav.showGlossary(forChart: name) } label: { card(spec) }
-                        .buttonStyle(.plain)
-                        .accessibilityHint("この指標の説明を開きます")
-                } else {
-                    card(spec)
-                }
+                card(spec)
             } else if failed {
                 VStack(alignment: .leading, spacing: 10) {
                     Text(LocalAnalytics.chartTitle(name: name))
@@ -60,17 +54,16 @@ struct ChartCard: View {
         }
     }
 
-    /// グラフ本体のカード。タップで解説へ飛べるときはタイトル横に ⓘ を出す。
+    /// グラフ本体のカード。タイトル行のタップで解説へ飛べるときはタイトル横に ⓘ を出す。
+    /// グラフ本体のタップは値の表示に使うため、解説への遷移はタイトル行に限定する。
     private func card(_ spec: ChartSpec) -> some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 6) {
-                Text(spec.title).font(.subheadline).bold()
-                Spacer(minLength: 4)
-                if hasGlossary {
-                    Image(systemName: "info.circle")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
+            if hasGlossary, let nav {
+                Button { nav.showGlossary(forChart: name) } label: { titleRow(spec) }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("この指標の説明を開きます")
+            } else {
+                titleRow(spec)
             }
             SpecChart(spec: spec, profile: profile)
                 .frame(height: 190)
@@ -80,6 +73,19 @@ struct ChartCard: View {
         .padding(12)
         .background(Color(.secondarySystemGroupedBackground),
                     in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func titleRow(_ spec: ChartSpec) -> some View {
+        HStack(spacing: 6) {
+            Text(spec.title).font(.subheadline).bold()
+            Spacer(minLength: 4)
+            if hasGlossary {
+                Image(systemName: "info.circle")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .contentShape(Rectangle())
     }
 
     /// 記録が少ないときに件数を明示する。点が数個しか無いグラフは一見して
@@ -134,6 +140,9 @@ private struct OptionalYScale: ViewModifier {
 struct SpecChart: View {
     let spec: ChartSpec
     var profile: HealthProfile = .init()
+
+    /// タップ(またはドラッグ)で選んだ日付。その日の各系列の値を吹き出しで示す。
+    @State private var selectedDate: Date?
 
     private struct Point: Identifiable {
         let id = UUID()
@@ -198,6 +207,7 @@ struct SpecChart: View {
                             .symbol(by: .value("系列", p.series))
                             .symbolSize(symbolSize)
                     }
+                    selectionMarks(pts, emphasizePoints: true)
                 }
             } else {
                 Chart {
@@ -206,6 +216,7 @@ struct SpecChart: View {
                         BarMark(x: .value("日付", p.date), y: .value(spec.ylabel, p.value))
                             .foregroundStyle(by: .value("系列", p.series))
                     }
+                    selectionMarks(pts, emphasizePoints: false)
                 }
             }
         }
@@ -213,6 +224,106 @@ struct SpecChart: View {
         .chartLegend(spec.series.count > 1 ? .visible : .hidden)
         .chartYAxisLabel(spec.ylabel)
         .modifier(OptionalYScale(domain: layout.domain))
+        .chartOverlay { proxy in
+            GeometryReader { geo in
+                Rectangle()
+                    .fill(.clear)
+                    .contentShape(Rectangle())
+                    .onTapGesture { location in
+                        select(at: location, proxy: proxy, geo: geo, pts: pts, toggle: true)
+                    }
+                    .gesture(
+                        DragGesture(minimumDistance: 8)
+                            .onChanged { value in
+                                select(at: value.location, proxy: proxy, geo: geo, pts: pts, toggle: false)
+                            }
+                    )
+            }
+        }
+    }
+
+    // ------------------------------------------------------------ タップで値を表示
+
+    /// タップ位置に最も近いデータ点の日付を選択する。
+    /// 同じ日付をもう一度タップしたら選択解除(toggle)。
+    private func select(at location: CGPoint, proxy: ChartProxy, geo: GeometryProxy,
+                        pts: [Point], toggle: Bool) {
+        guard let plotAnchor = proxy.plotFrame else { return }
+        let plot = geo[plotAnchor]
+        let x = location.x - plot.origin.x
+        guard let tapped = proxy.value(atX: x, as: Date.self) else { return }
+        let dates = Set(pts.map(\.date))
+        guard let nearest = dates.min(by: {
+            abs($0.timeIntervalSince(tapped)) < abs($1.timeIntervalSince(tapped))
+        }) else { return }
+        if toggle, selectedDate == nearest {
+            selectedDate = nil
+        } else {
+            selectedDate = nearest
+        }
+    }
+
+    /// 選択した日付の縦線と、各系列の値を並べた吹き出し。
+    @ChartContentBuilder
+    private func selectionMarks(_ pts: [Point], emphasizePoints: Bool) -> some ChartContent {
+        if let selectedDate {
+            let hits = pts.filter { $0.date == selectedDate }
+            RuleMark(x: .value("日付", selectedDate))
+                .foregroundStyle(Color.secondary.opacity(0.6))
+                .lineStyle(StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                .annotation(
+                    position: .top,
+                    alignment: .center,
+                    spacing: 4,
+                    overflowResolution: .init(x: .fit(to: .chart), y: .disabled)
+                ) {
+                    callout(date: selectedDate, hits: hits)
+                }
+            if emphasizePoints {
+                ForEach(hits) { p in
+                    PointMark(x: .value("日付", p.date), y: .value(spec.ylabel, p.value))
+                        .foregroundStyle(by: .value("系列", p.series))
+                        .symbolSize(90)
+                }
+            }
+        }
+    }
+
+    private func callout(date: Date, hits: [Point]) -> some View {
+        let multi = spec.series.count > 1
+        // 系列の定義順に並べる(積み上げ棒の凡例と順番を揃える)
+        let ordered = seriesNames.compactMap { name in hits.first { $0.series == name } }
+        return VStack(alignment: .leading, spacing: 2) {
+            Text(date.formatted(.dateTime.year().month().day()))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            ForEach(ordered) { p in
+                HStack(spacing: 4) {
+                    if multi {
+                        Circle()
+                            .fill(color(forSeries: p.series))
+                            .frame(width: 7, height: 7)
+                        Text(p.series)
+                    }
+                    Text(Self.valueText(p.value) + " " + spec.ylabel).bold()
+                }
+                .font(.caption2)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 6))
+        .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(.quaternary))
+    }
+
+    private func color(forSeries name: String) -> Color {
+        guard let i = seriesNames.firstIndex(of: name) else { return .secondary }
+        return seriesColors[i]
+    }
+
+    /// 吹き出し用の数値表記。整数はそのまま、それ以外は小数1桁(体重など)。
+    static func valueText(_ v: Double) -> String {
+        v.formatted(.number.precision(.fractionLength(0...1)))
     }
 
     /// 安全(薄緑)・危険(薄赤)エリアをデータの背後に敷くマーク。
