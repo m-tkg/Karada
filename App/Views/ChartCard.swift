@@ -232,9 +232,13 @@ struct SpecChart: View {
                     .onTapGesture { location in
                         select(at: location, proxy: proxy, geo: geo, pts: pts, toggle: true)
                     }
-                    .gesture(
-                        DragGesture(minimumDistance: 8)
+                    // ScrollView の縦スクロールを奪わないよう simultaneous にし、
+                    // 横方向が優位なドラッグだけ選択を追従させる。
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 12)
                             .onChanged { value in
+                                let t = value.translation
+                                guard abs(t.width) > abs(t.height) else { return }
                                 select(at: value.location, proxy: proxy, geo: geo, pts: pts, toggle: false)
                             }
                     )
