@@ -1,4 +1,4 @@
-.PHONY: help ios-generate ios-build ios-deploy release-tag
+.PHONY: help ios-generate ios-build ios-deploy release-tag ota
 
 PROJECT      = Karada.xcodeproj
 SCHEME       = Karada
@@ -15,6 +15,7 @@ help:
 	@echo "make ios-deploy             -> Build Release, install on DEVICE_ID, and launch"
 	@echo "make ios-deploy DEVICE_ID=... -> Use a different connected device"
 	@echo "make release-tag            -> Push $(TAG) to trigger Xcode Cloud"
+	@echo "make ota                    -> Build ipa/manifest.plist/index.html for OTA and deploy to ota.mtkg"
 
 ios-generate:
 	xcodegen generate
@@ -73,3 +74,9 @@ release-tag:
 	git tag -a "$(TAG)" -m "Release $(TAG)"
 	git push origin "$(TAG)"
 	@echo "Pushed tag $(TAG); Xcode Cloud should start if its workflow is configured for tag pushes."
+
+# OTA（Over-The-Air）配布。ipa + manifest.plist + index.html を作り、
+# ota.mtkg（miscpi.mtkg の /mnt/storage/ota）へ ssh 配信する。
+# 別サーバへ配るときは OTA_URL を渡す（例: make ota OTA_URL=https://example.com）。
+ota:
+	./Scripts/ota.sh $(OTA_URL)
